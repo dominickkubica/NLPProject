@@ -1,16 +1,22 @@
-pip install openai pandas python-dotenv
-
+from rapidfuzz import fuzz
+from rapidfuzz import process
+import re
 import pandas as pd
 from dotenv import load_dotenv
 import os
 from openai import OpenAI
 
 # Load environment variables
-load_dotenv()
-openai_api_key = os.getenv("OPENAI_API_KEY")
-os.environ["OPENAI_API_KEY"] = openai_api_key
+os.environ["OPENAI_API_KEY"] = ""  # Replace with your actual API key
 
-# Initialize the OpenAI client
+# Test if the key is loaded
+openai_api_key = os.getenv("OPENAI_API_KEY")
+if openai_api_key is None:
+    raise RuntimeError("Failed to load OPENAI_API_KEY. Check your configuration.")
+
+print(f"API Key loaded successfully: {openai_api_key[:5]}***")
+
+# Initialize OpenAI client
 client = OpenAI(api_key=openai_api_key)
 
 # Load the scholarship CSV
@@ -20,49 +26,101 @@ try:
 except Exception as e:
     raise RuntimeError(f"Error loading the scholarship CSV: {e}")
 
+
+# Refine Prompt Function
 def refine_prompt(user_input):
-    """
-    Refine the user's input into a structured and detailed prompt using OpenAI's GPT model.
-    """
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": "You are an expert at refining prompts specifically for finding scholarships and grants."},
-                {"role": "user", "content": f"Please refine this query to be more exhaustive for finding scholarships: {user_input}"}
+                {"role": "user", "content": f"Please refine this query to find more scholarships generally, only respond with the refined prompt, no other comments: {user_input}"}
             ],
         )
+        print(f"API Response: {response}")  # Debugging log
         refined_prompt = response.choices[0].message.content.strip()
         return refined_prompt
     except Exception as e:
         print(f"Error refining prompt: {e}")
         return None
 
-def search_scholarships(refined_prompt, df):
-    """
-    Search the scholarship DataFrame using the refined prompt.
-    """
+
+def search_scholarships(refined_prompt, df, client):
     try:
-        # Perform a case-insensitive keyword search in the 'Content' column
-        matching_scholarships = df[df['Content'].str.contains(refined_prompt, case=False, na=False)]
+        scholarships = df.to_dict(orient="records")
 
-        # Return the top 5 matches or a message if no matches are found
-        if not matching_scholarships.empty:
-            return matching_scholarships.head(5)
-        else:
-            return pd.DataFrame({"Message": ["No matching scholarships found."]})
+        messages = [
+            {"role": "system", "content": "You are an expert in finding scholarships for users."},
+            {
+                "role": "user",
+                "content": (
+                    f"The user's refined query is: '{refined_prompt}'. Below is the list of scholarships:\n\n{scholarships}\n\n"
+                    "Please identify and return ONLY the scholarships most relevant to the user's query. "
+                    "Return the results as a JSON array of objects, with each object containing EXACTLY the following four fields: "
+                    "\"Title\", \"Description\", \"Eligibility\", and \"URL\". "
+                    "Do not include any extra fields, explanations, comments, code blocks, or any text outside of the JSON array. "
+                    "Make sure the JSON is syntactically valid and properly formatted."
+                )
+            }
+        ]
+
+        response = client.chat.completions.create(model="gpt-4o-mini", messages=messages)
+
+        raw_output = response.choices[0].message.content.strip()
+        print("Raw Output from Model 2:", raw_output)  # Debugging log
+
+        # Strip Markdown code block delimiters if present
+        if raw_output.startswith("```") and raw_output.endswith("```"):
+            raw_output = raw_output.strip("```").strip("json").strip()
+
+        # Clean up common issues with raw JSON-like output
+        raw_output = raw_output.replace("\n", "").replace("\t", "").strip()
+
+        # Attempt to parse raw_output into a JSON-like list of dictionaries
+        import json
+        try:
+            parsed_output = json.loads(raw_output)
+            print("Parsed JSON Output:", parsed_output)
+            return parsed_output
+        except json.JSONDecodeError as e:
+            print(f"Error: Raw output is not valid JSON. {e}")
+            print("Raw Output (Debug):", repr(raw_output))  # Log raw output for debugging
+            return []
+
     except Exception as e:
-        print(f"Error searching scholarships: {e}")
-        return pd.DataFrame({"Message": [f"Error: {e}"]})
+        print(f"Error in search_scholarships: {e}")
+        return []
 
-def run_pipeline(user_query):
+
+# Updated Run Pipeline Function
+def run_pipeline(user_query, client):
     """
     End-to-end pipeline: Refine prompt, search scholarships, and return results.
     """
+    # Step 1: Refine the prompt
     refined_prompt = refine_prompt(user_query)
-    if refined_prompt:
-        print(f"Refined Prompt: {refined_prompt}")  # Debugging log
-        search_results = search_scholarships(refined_prompt, scholarship_df)
-        return search_results
-    else:
+    if not refined_prompt:
+        print("Error: Refined prompt is empty or invalid.")
         return pd.DataFrame({"Message": ["Failed to refine the prompt."]})
+
+    print(f"Refined Prompt: {refined_prompt}")  # Debugging log
+
+    # Step 2: Search scholarships
+    parsed_results = search_scholarships(refined_prompt, scholarship_df, client)
+
+    print(f"Parsed Results: {parsed_results}")  # Debugging log
+
+    # Step 3: Convert to DataFrame and return
+    if parsed_results:
+        formatted_results = [
+            {
+                "Name": entry.get("Title", "Unknown"),
+                "Description": entry.get("Description", "No description provided."),
+                "Eligibility": entry.get("Eligibility", "No eligibility criteria provided."),
+                "URL": entry.get("URL", "No URL provided.")
+            }
+            for entry in parsed_results
+        ]
+        return pd.DataFrame(formatted_results)
+    else:
+        return pd.DataFrame({"Message": ["No scholarships found."]})
