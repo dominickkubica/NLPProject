@@ -15,7 +15,7 @@ Clone the Repository:
 
 bash
 Copy code
-git clone https://github.com/your-repo-url/scholarship-finder.git
+git clone [https://github.com/your-repo-url/scholarship-finder.git](https://github.com/dominickkubica/NLPProject.git)
 cd scholarship-finder
 Install Dependencies: Ensure you have Python 3.7+ installed, then run:
 
@@ -69,16 +69,3 @@ Install them all with:
 
 Copy code
 pip install -r requirements.txt
-Contributing
-We welcome contributions! To contribute:
-
-Fork the repository.
-Create a new branch (git checkout -b feature-branch).
-Commit your changes (git commit -m "Add new feature").
-Push to the branch (git push origin feature-branch).
-Create a pull request.
-License
-This project is licensed under the MIT License. See LICENSE for details.
-
-Contact
-For questions or feedback, reach out to our team!
