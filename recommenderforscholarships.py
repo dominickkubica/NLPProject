@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
 """SCU Scholarship Finder"""
 
+import pandas as pd
 import streamlit as st
 from datetime import datetime
 from scholarship_pipeline import run_pipeline
+from openai import OpenAI
+
+# Load API key (hardcoded for now; replace with .env later)
+openai_api_key = ""  # Replace with your actual API key
+
+# Initialize OpenAI client
+client = OpenAI(api_key=openai_api_key)
 
 # Configure the page
 st.set_page_config(
@@ -76,15 +84,41 @@ elif nav_option == "🎓 Find Scholarships":
     # Submit and display results
     if st.button("🔍 Find Scholarships"):
         with st.spinner("Searching for scholarships..."):
-            search_results = run_pipeline(user_query)
-        
-        # Display results
+            # Pass the query and client to the pipeline
+            search_results = run_pipeline(user_query, client)
+
+            # Debug: Log the raw output for verification
+            print("Processed Search Results:", search_results)
+
+        # Handle DataFrame-based output
         if isinstance(search_results, pd.DataFrame) and not search_results.empty:
-            st.subheader("Search Results")
-            st.dataframe(search_results)
+            st.subheader("✨ Search Results (Table View)")
+            st.dataframe(search_results)  # Display as table for DataFrame output
+
+        # Handle dictionary-based or structured list-based output
+        elif isinstance(search_results, list) and search_results:
+            st.subheader("✨ Search Results (Detailed View)")
+            for i, scholarship in enumerate(search_results, start=1):
+                # Check for expected keys in each scholarship dictionary
+                name = scholarship.get("Name", "N/A")
+                description = scholarship.get("Description", "No description provided.")
+                eligibility = scholarship.get("Eligibility", "No eligibility criteria provided.")
+                url = scholarship.get("URL", "No URL provided.")
+
+                # Display scholarship details
+                with st.container():
+                    st.markdown(f"### {i}. {name}")
+                    st.markdown(f"**Description:** {description}")
+                    st.markdown(f"**Eligibility:** {eligibility}")
+                    if url != "No URL provided.":
+                        st.markdown(f"[Learn More]({url})")
+                    st.divider()  # Add a visual divider between scholarships
+
+        # Handle case with no results
         else:
-            st.subheader("No Results Found")
+            st.subheader("🚫 No Results Found")
             st.markdown("Sorry, no scholarships matched your query. Please try a different description.")
+
 
 # Statistics Page
 elif nav_option == "📊 Statistics":
@@ -113,3 +147,4 @@ elif nav_option == "ℹ️ About":
     Built with ❤️ for SCU students.
     """)
     st.markdown("[Visit SCU Financial Aid Office](https://www.scu.edu/financial-aid/)")
+
