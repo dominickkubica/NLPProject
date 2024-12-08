@@ -10,6 +10,7 @@ Personalized Recommendations: Tailored results based on your major, GPA, financi
 Dynamic Query Refinement: Your queries are enhanced by AI to maximize the relevance of results.
 Easy Navigation: Intuitive interface with clear sections for searching scholarships, viewing statistics, and exploring deadlines.
 SCU-Specific Resources: Includes links and tips from SCU’s financial aid office, career center, and other trusted sources.
+
 Setup Instructions
 Clone the Repository:
 
@@ -17,6 +18,7 @@ bash
 Copy code
 git clone [https://github.com/your-repo-url/scholarship-finder.git](https://github.com/dominickkubica/NLPProject.git)
 cd scholarship-finder
+
 Install Dependencies: Ensure you have Python 3.7+ installed, then run:
 
 Copy code
