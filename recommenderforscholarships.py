@@ -3,6 +3,7 @@
 
 import streamlit as st
 from datetime import datetime
+from scholarship_pipeline import run_pipeline
 
 # Configure the page
 st.set_page_config(
@@ -69,57 +70,21 @@ if nav_option == "🏠 Home":
 elif nav_option == "🎓 Find Scholarships":
     st.header("🎓 Find Scholarships")
 
-    # SCU Student Information
-    st.subheader("📚 SCU Student Information")
-    scu_id = st.text_input("Enter your SCU Student ID:")
-    scu_email = st.text_input("Enter your SCU Email Address:")
-    major = st.selectbox("Select your academic major:", [
-        "Computer Science", "Business Analytics", "Engineering", "Psychology", "Biology", "Undeclared", "Other"
-    ])
-    school_year = st.selectbox("Select your school year:", [
-        "Freshman", "Sophomore", "Junior", "Senior", "Graduate Student", "Alumni"
-    ])
-    department = st.selectbox("Select your department:", [
-        "Arts and Sciences", "Business", "Engineering", "Other"
-    ])
-
-    # Academic Performance
-    st.subheader("📊 Academic Information")
-    gpa = st.slider("Enter your GPA:", 0.0, 4.0, 3.0, step=0.1)
-    honors = st.selectbox("Are you a member of the Honors Program?", ["Yes", "No"])
-
-    # Financial Information
-    st.subheader("💵 Financial Information")
-    financial_need = st.selectbox("Do you require need-based financial aid?", ["Yes", "No"])
-    FAFSA_filed = st.selectbox("Have you filed your FAFSA for this year?", ["Yes", "No"])
-    residency = st.selectbox("What is your residency status?", [
-        "California Resident", "Out-of-State", "International Student"
-    ])
-
-    # Scholarship Preferences
-    st.subheader("🎯 Preferences")
-    scholarship_type = st.multiselect(
-        "Select scholarship types you are interested in:", [
-            "Merit-Based", "Need-Based", "Graduate Assistantships",
-            "Diversity Scholarships", "Department-Specific Aid", "SCU-Sponsored Scholarships"
-        ]
-    )
-    causes = st.multiselect(
-        "Select causes or values important to you:", [
-            "Sustainability", "Community Service", "Diversity", "Social Justice", "STEM", "Arts"
-        ]
-    )
-
-    # Submit and Display Results
+    # Collect user input
+    user_query = st.text_area("Describe the type of scholarship you're looking for (e.g., major, GPA, financial need):")
+    
+    # Submit and display results
     if st.button("🔍 Find Scholarships"):
-        st.success("Scholarships matching your preferences will be displayed here!")
-        # Placeholder for scholarship results
-        st.markdown("""
-        **Example Scholarships:**
-        - **SCU Merit Scholarship**: $5,000 (Deadline: 2024-12-15)
-        - **Diversity in Tech Award**: $3,000 (Deadline: 2024-12-20)
-        - **Graduate Assistantship Grant**: $10,000 (Deadline: 2024-12-10)
-        """)
+        with st.spinner("Searching for scholarships..."):
+            search_results = run_pipeline(user_query)
+        
+        # Display results
+        if isinstance(search_results, pd.DataFrame) and not search_results.empty:
+            st.subheader("Search Results")
+            st.dataframe(search_results)
+        else:
+            st.subheader("No Results Found")
+            st.markdown("Sorry, no scholarships matched your query. Please try a different description.")
 
 # Statistics Page
 elif nav_option == "📊 Statistics":
