@@ -7,12 +7,17 @@ from datetime import datetime
 from scholarship_pipeline import run_pipeline
 from openai import OpenAI
 
-# Load API key (hardcoded for now; replace with .env later)
-openai_api_key = ""  # Replace with your actual API key
+# Prompt the user for their API Key in the sidebar
+openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password")
 
-# Initialize OpenAI client
+if not openai_api_key:
+    st.error("Please enter your OpenAI API Key in the sidebar.")
+    st.stop()  # Stop execution until the user provides a key
+
+# Initialize OpenAI client with the provided API key
 client = OpenAI(api_key=openai_api_key)
 
+# Now you can use 'client' anywhere in your code
 # Configure the page
 st.set_page_config(
     page_title="SCU Scholarship Finder",
