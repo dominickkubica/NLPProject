@@ -6,19 +6,6 @@ from dotenv import load_dotenv
 import os
 from openai import OpenAI
 
-# Load environment variables
-os.environ["OPENAI_API_KEY"] = ""  # Replace with your actual API key
-
-# Test if the key is loaded
-openai_api_key = os.getenv("OPENAI_API_KEY")
-if openai_api_key is None:
-    raise RuntimeError("Failed to load OPENAI_API_KEY. Check your configuration.")
-
-print(f"API Key loaded successfully: {openai_api_key[:5]}***")
-
-# Initialize OpenAI client
-client = OpenAI(api_key=openai_api_key)
-
 # Load the scholarship CSV
 try:
     scholarship_df = pd.read_csv("scholarships.csv")
